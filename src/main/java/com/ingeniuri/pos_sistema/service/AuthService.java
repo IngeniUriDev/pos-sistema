@@ -17,10 +17,6 @@ import org.springframework.stereotype.Service;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Servicio que maneja la lógica de autenticación y registro.
- * Patrón: Service Layer / Facade
- */
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -31,11 +27,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
-    /**
-     * Registra un nuevo usuario en el sistema.
-     */
     public AuthResponse register(RegisterRequest request) {
-        // Verificar si el username o email ya existen
         if (usuarioRepository.existsByUsername(request.getUsername())) {
             throw new RuntimeException("El username ya está en uso");
         }
@@ -43,7 +35,6 @@ public class AuthService {
             throw new RuntimeException("El email ya está en uso");
         }
 
-        // Determinar los roles del usuario (por defecto ROLE_VENDEDOR si no se especifican)
         Set<Rol> roles = new HashSet<>();
         if (request.getRoles() == null || request.getRoles().isEmpty()) {
             Rol rolVendedor = rolRepository.findByNombre("ROLE_VENDEDOR")
@@ -57,10 +48,9 @@ public class AuthService {
             }
         }
 
-        // Crear el usuario
         Usuario usuario = new Usuario();
         usuario.setUsername(request.getUsername());
-        usuario.setPassword(passwordEncoder.encode(request.getPassword())); // Encriptar contraseña
+        usuario.setPassword(passwordEncoder.encode(request.getPassword()));
         usuario.setNombreCompleto(request.getNombreCompleto());
         usuario.setEmail(request.getEmail());
         usuario.setRoles(new java.util.ArrayList<>(roles));
@@ -68,7 +58,6 @@ public class AuthService {
 
         usuarioRepository.save(usuario);
 
-        // Generar token
         String token = jwtService.generateToken(usuario);
         return AuthResponse.builder()
                 .token(token)
@@ -76,20 +65,26 @@ public class AuthService {
                 .build();
     }
 
-    /**
-     * Autentica un usuario y devuelve un token JWT.
-     */
     public AuthResponse login(LoginRequest request) {
-        // Spring Security valida las credenciales
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
+        System.out.println("🔐 Intentando login para: " + request.getUsername());
 
-        // Si no lanza excepción, las credenciales son correctas
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getUsername(),
+                            request.getPassword()
+                    )
+            );
+            System.out.println("✅ Autenticación exitosa");
+        } catch (Exception e) {
+            System.err.println("❌ Error de autenticación: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+
         Usuario usuario = usuarioRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // Generar token
         String token = jwtService.generateToken(usuario);
         return AuthResponse.builder()
                 .token(token)

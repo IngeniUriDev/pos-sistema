@@ -16,11 +16,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * Filtro que intercepta cada petición HTTP para validar el token JWT.
- * Patrón: Interceptor / Chain of Responsibility
- * Extiende OncePerRequestFilter para garantizar que se ejecute solo una vez por petición.
- */
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -35,40 +30,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // 1. Extraer el header "Authorization" de la petición HTTP
         final String authHeader = request.getHeader("Authorization");
 
-        // 2. Validar que el header exista y empiece con "Bearer "
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response); // Si no hay token, dejamos que la petición continúe
+            System.out.println("⚠️ No se encontró header Authorization o no empieza con 'Bearer '");
+            filterChain.doFilter(request, response);
             return;
         }
 
-        // 3. Extraer el token (quitando la palabra "Bearer ")
-        final String jwt = authHeader.substring(7);
-
-        // 4. Extraer el username del token
+        final String jwt = authHeader.substring(7); // Quita "Bearer "
         final String username = jwtService.extractUsername(jwt);
+        System.out.println("🔍 Token recibido. Username extraído: " + username);
 
-        // 5. Si hay un username y aún no está autenticado en el contexto de Spring
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+            System.out.println("👤 Usuario cargado de la BD. Authorities: " + userDetails.getAuthorities());
 
-            // 6. Validar que el token sea válido para este usuario
             if (jwtService.isTokenValid(jwt, userDetails)) {
-                // 7. Crear el objeto de autenticación y guardarlo en el contexto de seguridad
+                System.out.println("✅ Token VÁLIDO. Configurando contexto de seguridad...");
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
-                        null, // Las credenciales (password) son null porque ya validamos con el token
-                        userDetails.getAuthorities() // Los roles/permisos del usuario
+                        null,
+                        userDetails.getAuthorities()
                 );
-
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+            } else {
+                System.err.println("❌ Token INVÁLIDO o EXPIRADO. No se configurará el contexto.");
             }
         }
 
-        // 8. Continuar con la cadena de filtros (hacia el Controlador)
         filterChain.doFilter(request, response);
     }
 }

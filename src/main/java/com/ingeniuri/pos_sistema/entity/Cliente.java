@@ -1,6 +1,7 @@
 package com.ingeniuri.pos_sistema.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -9,28 +10,30 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * Entidad que representa una categoría de productos.
- * Patrón: Entity (JPA)
+ * Entidad que representa un cliente (opcional en la venta).
  */
 @Entity
-@Table(name = "categorias")
+@Table(name = "clientes")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Categoria {
+public class Cliente {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "El nombre de la categoría es obligatorio")
-    @Size(min = 2, max = 50, message = "El nombre debe tener entre 2 y 50 caracteres")
-    @Column(nullable = false, unique = true, length = 50)
+    @NotBlank(message = "El nombre es obligatorio")
+    @Size(max = 100)
+    @Column(nullable = false, length = 100)
     private String nombre;
 
-    @Size(max = 255, message = "La descripción no puede exceder 255 caracteres")
-    @Column(length = 255)
-    private String descripcion;
+    @Email(message = "El email debe ser válido")
+    @Column(unique = true, length = 100)
+    private String email;
+
+    @Column(length = 20)
+    private String telefono;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
