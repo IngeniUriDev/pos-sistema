@@ -30,27 +30,33 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> {})
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // Rutas PÚBLICAS (sin autenticación)
+
+                        // 1. Rutas PÚBLICAS (sin autenticación)
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/ventas/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_VENDEDOR")
-                        // Rutas de ADMIN (solo administradores)
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+
+                        // 2. Rutas de ADMIN (solo administradores)
                         .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/productos/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/categorias/**").hasAuthority("ROLE_ADMIN")
 
-                        // Rutas de ADMIN y VENDEDOR
+                        // 3. Rutas de ADMIN y VENDEDOR
                         .requestMatchers(HttpMethod.POST, "/api/productos/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_VENDEDOR")
                         .requestMatchers(HttpMethod.PUT, "/api/productos/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_VENDEDOR")
                         .requestMatchers("/api/productos/stock-bajo").hasAnyAuthority("ROLE_ADMIN", "ROLE_VENDEDOR")
+                        .requestMatchers("/api/ventas/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_VENDEDOR")
+                        .requestMatchers("/api/reportes/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_VENDEDOR")
 
-                        // Rutas de ADMIN, VENDEDOR y CAJERO (lectura)
+                        // 4. Rutas de ADMIN, VENDEDOR y CAJERO (lectura)
                         .requestMatchers("/api/productos/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_VENDEDOR", "ROLE_CAJERO")
                         .requestMatchers("/api/categorias/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_VENDEDOR", "ROLE_CAJERO")
-                        .requestMatchers("/api/ventas/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_VENDEDOR", "ROLE_CAJERO")
 
-                        // Cualquier otra ruta requiere autenticación
+                        // 5. Cualquier otra ruta requiere autenticación
                         .anyRequest().authenticated()
+
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
